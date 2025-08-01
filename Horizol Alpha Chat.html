@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Horizon Alpha Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#121933;
+      --accent:#6ae3ff;
+      --accent-2:#9cf07b;
+      --text:#e9f1ff;
+      --muted:#9aa9c4;
+      --danger:#ff6a8a;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 800px at 20% -10%, rgba(106,227,255,.08), transparent 60%),
+        radial-gradient(1000px 700px at 120% 10%, rgba(156,240,123,.06), transparent 60%),
+        radial-gradient(800px 600px at 50% 120%, rgba(255,255,255,.04), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      font: 15px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
+      display:flex;
+      flex-direction:column;
+    }
+    header{
+      padding:18px 20px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:linear-gradient(180deg, rgba(11,16,32,.85), rgba(11,16,32,.55) 65%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .logo{
+      width:42px;height:42px;border-radius:10px;
+      background:
+        conic-gradient(from 210deg, #6ae3ff, #9cf07b, #6ae3ff);
+      position:relative; overflow:hidden; box-shadow: var(--shadow);
+    }
+    .logo::after{
+      content:""; position:absolute; inset:2px; border-radius:8px;
+      background: radial-gradient(180px 110px at 70% 30%, rgba(255,255,255,.35), transparent 55%), #0c1330;
+      mix-blend-mode: screen; opacity:.9;
+    }
+    .title{
+      display:flex; flex-direction:column;
+    }
+    .title h1{
+      margin:0; font-size:18px; letter-spacing:.4px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .badge{
+      font-size:11px; padding:3px 8px; border-radius:999px;
+      background:linear-gradient(90deg, rgba(106,227,255,.15), rgba(156,240,123,.15));
+      color:var(--accent);
+      border:1px solid rgba(106,227,255,.35);
+    }
+    .title p{margin:2px 0 0; color:var(--muted); font-size:12px}
+    main{
+      flex:1; display:grid; grid-template-rows: 1fr auto; max-width:1000px; width:100%;
+      margin: 0 auto; padding: 12px;
+      gap:12px;
+    }
+    .chat{
+      background: linear-gradient(180deg, rgba(18,25,51,.65), rgba(18,25,51,.45));
+      border:1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex; flex-direction:column; min-height: 60vh;
+    }
+    .messages{
+      padding:18px; overflow:auto; flex:1;
+      display:flex; flex-direction:column; gap:12px;
+      scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent;
+    }
+    .messages::-webkit-scrollbar{height:8px;width:8px}
+    .messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:8px}
+    .row{
+      display:flex; gap:10px; align-items:flex-start;
+      animation: rise .25s ease-out;
+    }
+    @keyframes rise { from{opacity:0; transform: translateY(6px)} to{opacity:1; transform:none} }
+    .avatar{
+      width:34px;height:34px;border-radius:10px; flex:0 0 34px;
+      background:radial-gradient(circle at 30% 30%, #9cf07b, #6ae3ff);
+      box-shadow: 0 6px 18px rgba(106,227,255,.25);
+    }
+    .avatar.user{
+      background: radial-gradient(circle at 70% 30%, #ff9dbb, #9b6bff);
+      box-shadow: 0 6px 18px rgba(155,107,255,.25);
+    }
+    .bubble{
+      max-width: min(78ch, 85%); padding:12px 14px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(10,15,32,.45);
+      backdrop-filter: blur(4px);
+      white-space: pre-wrap; word-wrap: break-word;
+    }
+    .row.ai .bubble{ border-color: rgba(106,227,255,.25) }
+    .row.user .bubble{ border-color: rgba(255,255,255,.12) }
+    .thinking{
+      display:inline-flex; gap:6px; align-items:center; color:var(--muted); font-size:13px;
+    }
+    .dot{ width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.6; animation: pulse 1.2s infinite }
+    .dot:nth-child(2){ animation-delay:.15s }
+    .dot:nth-child(3){ animation-delay:.3s }
+    @keyframes pulse { 0%,80%,100%{ transform: translateY(0); opacity:.4 } 40%{ transform: translateY(-3px); opacity:1 } }
+    .composer{
+      display:flex; gap:10px; align-items:center; padding:12px;
+      background: linear-gradient(180deg, rgba(18,25,51,.7), rgba(18,25,51,.55));
+      border:1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    textarea{
+      resize:none; flex:1; min-height:48px; max-height:160px;
+      padding:12px 12px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(8,12,26,.65); color:var(--text);
+      outline:none; font: inherit;
+    }
+    textarea::placeholder{ color: #8da0c6 }
+    .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .select, button{
+      height:40px; border-radius:10px; border:1px solid rgba(255,255,255,.12);
+      background: rgba(8,12,26,.7); color:var(--text);
+      padding:8px 12px; font:inherit; outline:none;
+    }
+    .select{ min-width: 180px }
+    .primary{
+      background: linear-gradient(90deg, rgba(106,227,255,.18), rgba(156,240,123,.18));
+      border:1px solid rgba(106,227,255,.35);
+      color: #dffcff;
+    }
+    .danger{
+      border-color: rgba(255,106,138,.4);
+      background: rgba(255,106,138,.12);
+      color: #ffdce5;
+    }
+    .toolbar{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:space-between; margin-top:6px; padding:0 2px;
+    }
+    .status{
+      color:var(--muted); font-size:12px; display:flex; gap:8px; align-items:center;
+    }
+    .pill{
+      padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+      color:var(--muted); font-size:12px; background: rgba(8,12,26,.5)
+    }
+    .hidden{ display:none !important }
+    .sr-only{
+      position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+    }
+    footer{
+      margin: 8px auto 20px; color:var(--muted); font-size:12px;
+    }
+    .cols{
+      display:grid; grid-template-columns: 1fr; gap:12px; width:100%;
+    }
+    @media (min-width: 860px){
+      .cols{ grid-template-columns: 1fr 320px }
+      .side{
+        background: linear-gradient(180deg, rgba(18,25,51,.65), rgba(18,25,51,.45));
+        border:1px solid rgba(255,255,255,.07);
+        border-radius: var(--radius); box-shadow: var(--shadow);
+        padding:14px; height:100%;
+      }
+      .side h3{ margin:4px 0 10px; font-size:14px; letter-spacing:.3px; color:#cfe8ff }
+      .side .card{
+        border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; margin-bottom:10px;
+        background: rgba(8,12,26,.45);
+      }
+      .side label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px }
+      .side input[type="number"], .side input[type="range"]{
+        width:100%; accent-color:#7ee0ff; margin: 6px 0;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "marked": "https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <div class="logo" aria-hidden="true"></div>
+    <div class="title">
+      <h1>Horizon Alpha <span class="badge">chat prototype</span></h1>
+      <p>Local sandbox that simulates chatting with the Horizon Alpha model (no network required).</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="cols">
+      <section class="chat" aria-label="Chat conversation">
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions">
+          <!-- Messages appear here -->
+        </div>
+
+        <div class="toolbar">
+          <div class="status">
+            <span class="pill" id="modelPill" title="Selected model">Model: horizon-alpha</span>
+            <span class="pill" id="latencyPill" title="Simulated latency">Latency: 0 ms</span>
+            <span class="pill" id="tokenPill" title="Estimated output tokens">Tokens: 0</span>
+          </div>
+          <div class="controls">
+            <select id="styleSelect" class="select" title="Response style">
+              <option value="balanced" selected>Style: Balanced</option>
+              <option value="concise">Style: Concise</option>
+              <option value="creative">Style: Creative</option>
+              <option value="technical">Style: Technical</option>
+            </select>
+            <button id="clearBtn" class="danger" title="Clear conversation">Clear</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <h3>Generation settings</h3>
+        <div class="card">
+          <label for="temp">Temperature <span id="tempVal">0.7</span></label>
+          <input id="temp" type="range" min="0" max="2" step="0.1" value="0.7" />
+        </div>
+        <div class="card">
+          <label for="topP">Top-p <span id="topPVal">0.95</span></label>
+          <input id="topP" type="range" min="0" max="1" step="0.01" value="0.95" />
+        </div>
+        <div class="card">
+          <label for="maxToks">Max tokens</label>
+          <input id="maxToks" type="number" min="16" max="4096" step="16" value="512" />
+        </div>
+        <div class="card">
+          <label>System prompt</label>
+          <textarea id="systemPrompt" rows="5" placeholder="You are Horizon Alpha, a helpful and knowledgeable assistant. Provide clear, safe, and accurate answers."></textarea>
+        </div>
+        <div class="card">
+          <button id="exportBtn" class="primary" style="width:100%">Export chat (JSON)</button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="composer" aria-label="Message composer">
+      <textarea id="input" rows="2" placeholder="Message Horizon Alpha..." aria-label="Message input"></textarea>
+      <button id="send" class="primary" title="Send message">Send</button>
+    </div>
+  </main>
+
+  <footer>
+    This is a local, offline simulator. No data leaves your device. The “Horizon Alpha” responses are procedurally generated for demo purposes.
+  </footer>
+
+  <script type="module">
+    import { marked } from "marked";
+
+    const $ = sel => document.querySelector(sel);
+    const messagesEl = $('#messages');
+    const inputEl = $('#input');
+    const sendBtn = $('#send');
+    const clearBtn = $('#clearBtn');
+    const exportBtn = $('#exportBtn');
+    const modelPill = $('#modelPill');
+    const latencyPill = $('#latencyPill');
+    const tokenPill = $('#tokenPill');
+    const tempEl = $('#temp');
+    const topPEl = $('#topP');
+    const maxToksEl = $('#maxToks');
+    const tempVal = $('#tempVal');
+    const topPVal = $('#topPVal');
+    const styleSelect = $('#styleSelect');
+    const systemPromptEl = $('#systemPrompt');
+
+    // Initialize defaults
+    systemPromptEl.value = "You are Horizon Alpha, a helpful, careful, and knowledgeable AI assistant. Answer clearly, be concise by default, and include examples when helpful. If the user asks for unsafe or disallowed content, refuse politely and suggest safer alternatives.";
+
+    const state = {
+      model: 'horizon-alpha',
+      history: [],
+      thinking: false,
+    };
+
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function createRow(role, html) {
+      const row = document.createElement('div');
+      row.className = 'row ' + (role === 'user' ? 'user' : 'ai');
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar ' + (role === 'user' ? 'user' : 'ai');
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = html;
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      return { row, bubble };
+    }
+
+    function addThinkingRow() {
+      const row = document.createElement('div');
+      row.className = 'row ai';
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      const think = document.createElement('div');
+      think.className = 'thinking';
+      think.innerHTML = '<span>Horizon Alpha is thinking</span> <span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+      bubble.appendChild(think);
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      messagesEl.appendChild(row);
+      scrollToBottom();
+      return { row, bubble };
+    }
+
+    function sanitize(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Procedural placeholder assets (generate a tiny SVG data URI for demonstration if needed)
+    function generateSignature(seed) {
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < seed.length; i++) {
+        h ^= seed.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return (h >>> 0).toString(16);
+    }
+
+    // Simple token estimator
+    function estimateTokens(text) {
+      return Math.max(1, Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.3));
+    }
+
+    // Horizon Alpha Simulator
+    function horizonAlphaSimulate(systemPrompt, history, settings) {
+      // Settings: temperature, top_p, max_tokens, style
+      // We'll produce a safe and helpful response that may vary with style and temperature.
+      const lastUser = [...history].reverse().find(m => m.role === 'user')?.content || '';
+      const topic = summarizeTopic(lastUser);
+      const style = settings.style;
+      const temp = parseFloat(settings.temperature);
+      const topP = parseFloat(settings.top_p);
+      const maxToks = parseInt(settings.max_tokens, 10) || 512;
+
+      const seed = generateSignature(lastUser + style + temp + topP);
+      const rng = mulberry32(hashToInt(seed));
+
+      // Potential safety check (very naive)
+      if (isUnsafe(lastUser)) {
+        return limitTokens(formatRefusal(lastUser), maxToks);
+      }
+
+      // Compose sections
+      const openers = {
+        balanced: ["Here's a clear overview:", "Let’s break it down:", "Great question—here’s a concise rundown:"],
+        concise: ["In short:", "Summary:", "Briefly:"],
+        creative: ["Imagine this:", "Picture this:", "Let’s explore:"],
+        technical: ["Technical overview:", "Detailed breakdown:", "Spec sheet:"]
+      };
+
+      const bullets = [
+        "Key idea",
+        "Why it matters",
+        "How it works",
+        "Pitfalls",
+        "Next steps"
+      ];
+
+      const opener = sample(openers[style] || openers.balanced, rng);
+      const variability = variabilityText(topic, rng, style, temp);
+
+      const bulletCount = clamp(Math.round(3 + rng()*2 + temp), 3, 6);
+      const bulletLines = [];
+      for (let i=0;i<bulletCount;i++){
+        const label = bullets[i % bullets.length];
+        bulletLines.push(`- ${label}: ${phrase(topic, rng, style)}`);
+      }
+
+      const examples = style === 'technical'
+        ? codeExample(topic)
+        : style === 'creative'
+          ? creativeExample(topic, rng)
+          : usageExample(topic, rng);
+
+      const answer = [
+        `${opener} ${variability}`,
+        "",
+        ...bulletLines,
+        "",
+        examples
+      ].join("\n");
+
+      return limitTokens(answer, maxToks);
+    }
+
+    function summarizeTopic(text){
+      const t = text.trim();
+      if(!t) return "general request";
+      // pick key nouns/phrases roughly
+      const tokens = t.toLowerCase().split(/[^a-z0-9#+.\-]+/).filter(Boolean);
+      const keep = tokens.filter(w => w.length > 2).slice(0, 6);
+      return keep.join(' ');
+    }
+
+    function phrase(topic, rng, style){
+      const bits = [
+        `focused on ${topic || 'the task'}`,
+        `optimizes clarity and safety`,
+        `scales from basics to advanced usage`,
+        `balances trade-offs`,
+        `avoids common mistakes`,
+        `provides actionable steps`
+      ];
+      const pick = bits[Math.floor(rng()*bits.length)];
+      if(style === 'creative'){
+        return pick.replace('focused on', 'orbiting').replace('optimizes','amplifies');
+      }
+      return pick;
+    }
+
+    function variabilityText(topic, rng, style, temp){
+      const intros = [
+        `We’ll approach ${topic || 'this'} step by step.`,
+        `Let’s get an intuitive and practical feel for ${topic || 'the problem'}.`,
+        `We’ll combine clarity with pragmatism for ${topic || 'your goal'}.`
+      ];
+      const t = intros[Math.floor(rng()*intros.length)];
+      if(temp > 1.2 && style !== 'technical'){
+        return t + " I’ll also offer a few alternative angles.";
+      }
+      return t;
+    }
+
+    function usageExample(topic, rng){
+      const ex = `Example:
+1) Define your objective related to "${topic || 'your task'}".
+2) Start with a minimal prototype.
+3) Iterate using measurable feedback.
+4) Document assumptions and decisions.`;
+      return ex;
+    }
+
+    function creativeExample(topic, rng){
+      return `Try this thought experiment:
+- If ${topic || 'the idea'} were a journey, what would each milestone look like?
+- Sketch a postcard from the destination to clarify success.`;
+    }
+
+    function codeExample(topic){
+      const safeVar = (topic || 'demo').replace(/[^a-z0-9_]+/gi,'_').slice(0,20) || 'demo';
+      return `Quick code sketch (pseudo-JS):
+function plan_${safeVar}(goal) {
+  const constraints = ["time", "quality", "scope"];
+  return { goal, steps: ["prototype", "measure", "iterate"], constraints };
+}
+console.log(plan_${safeVar}("${topic || 'goal'}"));`;
+    }
+
+    function limitTokens(text, maxToks){
+      // naive token limiter by words
+      const words = text.split(/\s+/);
+      const limit = Math.max(4, Math.floor(maxToks / 1.3));
+      if(words.length <= limit) return text;
+      return words.slice(0, limit-3).join(' ') + ' ...';
+    }
+
+    function isUnsafe(text){
+      const lower = text.toLowerCase();
+      // Very basic content filter for demo
+      const disallowed = [
+        "make a bomb","harm someone","violence instructions","credit card numbers",
+        "malware", "ddos", "illegal", "explicit sexual content with minors"
+      ];
+      return disallowed.some(k => lower.includes(k));
+    }
+
+    function formatRefusal(query){
+      return `I can’t help with that request.
+Here’s why: it could facilitate harm or violate safety guidelines.
+If you’d like, I can:
+- Discuss high-level safety considerations
+- Suggest legal, ethical alternatives
+- Help with educational, defensive best practices`;
+    }
+
+    // RNG helpers
+    function mulberry32(a){ return function(){ let t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; } }
+    function hashToInt(hex){
+      let h = 0;
+      for(let i=0;i<hex.length;i++){
+        h = ((h << 5) - h + hex.charCodeAt(i)) | 0;
+      }
+      return Math.abs(h) || 1;
+    }
+    function sample(arr, rng){ return arr[Math.floor(rng()*arr.length)] }
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)) }
+
+    function renderMarkdown(text){
+      return marked.parse(text, { breaks: true });
+    }
+
+    function addMessage(role, content){
+      state.history.push({ role, content });
+      const html = role === 'user' ? sanitize(content) : renderMarkdown(content);
+      const { row } = createRow(role, html);
+      messagesEl.appendChild(row);
+      scrollToBottom();
+      updateTokenEstimate();
+      return row;
+    }
+
+    function updateTokenEstimate() {
+      const all = state.history.map(m => m.content).join('\n');
+      const count = estimateTokens(all);
+      tokenPill.textContent = `Tokens: ${count}`;
+    }
+
+    // Streaming typewriter effect
+    async function streamAnswer(fullText, targetBubble, latencyMs = 120) {
+      let out = '';
+      const tokens = fullText.split(/(\s+)/); // keep spaces
+      let start = performance.now();
+      for (let i = 0; i < tokens.length; i++) {
+        out += tokens[i];
+        targetBubble.innerHTML = renderMarkdown(out);
+        await sleep(12 + Math.random() * 18);
+      }
+      const elapsed = Math.max(0, Math.round(performance.now() - start));
+      latencyPill.textContent = `Latency: ${elapsed} ms`;
+    }
+
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    async function handleSend() {
+      const text = inputEl.value.trim();
+      if(!text || state.thinking) return;
+      inputEl.value = '';
+      addMessage('user', text);
+
+      state.thinking = true;
+      const thinkingRow = addThinkingRow();
+
+      // Simulated latency based on message length + temperature
+      const baseDelay = clamp(150 + text.length * 2, 150, 1500);
+      await sleep(baseDelay);
+
+      // Generate reply via simulator
+      const reply = horizonAlphaSimulate(
+        systemPromptEl.value,
+        state.history,
+        {
+          temperature: tempEl.value,
+          top_p: topPEl.value,
+          max_tokens: maxToksEl.value,
+          style: styleSelect.value
+        }
+      );
+
+      // Replace thinking row with streamed message
+      if (thinkingRow && thinkingRow.row.parentNode) {
+        messagesEl.removeChild(thinkingRow.row);
+      }
+      const { row, bubble } = createRow('ai', '');
+      messagesEl.appendChild(row);
+      await streamAnswer(reply, bubble);
+      state.history.push({ role: 'assistant', content: reply });
+      updateTokenEstimate();
+      scrollToBottom();
+      state.thinking = false;
+    }
+
+    // UI bindings
+    sendBtn.addEventListener('click', handleSend);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      state.history = [];
+      messagesEl.innerHTML = '';
+      updateTokenEstimate();
+      inputEl.focus();
+    });
+
+    exportBtn.addEventListener('click', () => {
+      const data = {
+        model: state.model,
+        settings: {
+          temperature: tempEl.value,
+          top_p: topPEl.value,
+          max_tokens: maxToksEl.value,
+          style: styleSelect.value,
+          system: systemPromptEl.value
+        },
+        history: state.history
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ts = new Date().toISOString().replace(/[:.]/g,'-');
+      a.download = `horizon-alpha-chat-${ts}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    tempEl.addEventListener('input', () => { tempVal.textContent = tempEl.value; });
+    topPEl.addEventListener('input', () => { topPVal.textContent = topPEl.value; });
+
+    // Seed conversation
+    function seedWelcome(){
+      const welcome = `Hello, I’m Horizon Alpha.
+I can help with reasoning, coding, writing, and more.
+Ask me anything, or try: 
+- “Explain a complex topic simply”
+- “Draft a plan with trade-offs”
+- “Provide a small code sketch”`;
+      addMessage('assistant', welcome);
+    }
+    seedWelcome();
+
+  </script>
+</body>
+</html>
